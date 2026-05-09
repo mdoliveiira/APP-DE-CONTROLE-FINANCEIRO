@@ -1,0 +1,173 @@
+'use client';
+
+import { Input } from '@/components/ui/input';
+import { deleteCategory } from '@/lib/actions/categories';
+import { upsertBudget, deleteBudget } from '@/lib/actions/budgets';
+import { formatBRL } from '@/lib/utils/currency';
+import type { Category, Budget } from '@/lib/types';
+import { Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+
+interface CategoryGridProps {
+  categories: Category[];
+  budgets?: Map<string, Budget>;
+  onCategoryDeleted?: () => void;
+}
+
+const cardStyle = {
+  backgroundColor: '#141419',
+  border: '1px solid rgba(255,255,255,0.07)',
+  borderRadius: '0.875rem',
+  padding: '1rem',
+};
+
+export function CategoryGrid({ categories, budgets, onCategoryDeleted }: CategoryGridProps) {
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id?: string }>({ open: false });
+  const [deleting, setDeleting] = useState(false);
+  const [budgetEditing, setBudgetEditing] = useState<string | null>(null);
+  const [budgetSaving, setBudgetSaving] = useState<string | null>(null);
+  const [budgetValues, setBudgetValues] = useState<Record<string, string>>(
+    Object.fromEntries(
+      categories.map(cat => [cat.id, budgets?.get(cat.id)?.amount_limit.toString() || ''])
+    )
+  );
+
+  const handleDelete = async () => {
+    if (!deleteConfirm.id) return;
+    setDeleting(true);
+    try {
+      await deleteCategory(deleteConfirm.id);
+      setDeleteConfirm({ open: false });
+      onCategoryDeleted?.();
+    } catch (error) {
+      console.error('Erro ao deletar categoria:', error);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleBudgetSave = async (categoryId: string) => {
+    const value = budgetValues[categoryId]?.trim();
+    setBudgetSaving(categoryId);
+    try {
+      const numValue = parseFloat(value || '0');
+      if (numValue > 0) {
+        await upsertBudget(categoryId, numValue);
+      } else if (value === '') {
+        await deleteBudget(categoryId);
+        setBudgetValues(prev => ({ ...prev, [categoryId]: '' }));
+      }
+      setBudgetEditing(null);
+    } catch (error) {
+      console.error('Erro ao salvar orçamento:', error);
+    } finally {
+      setBudgetSaving(null);
+    }
+  };
+
+  if (categories.length === 0) {
+    return (
+      <div
+        className="rounded-xl p-8 text-center"
+        style={{
+          border: '1px dashed rgba(255,255,255,0.12)',
+        }}
+      >
+        <p className="text-sm" style={{ color: '#6B7280' }}>
+          Nenhuma categoria criada. Crie uma para começar!
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+        {categories.map((category) => (
+          <div key={category.id} style={cardStyle} className="space-y-3">
+            <div className="flex items-center gap-3 justify-between">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div
+                  className="h-5 w-5 rounded-md shrink-0"
+                  style={{ backgroundColor: category.color }}
+                />
+                <span
+                  className="text-sm font-medium truncate"
+                  style={{ color: '#E8E8EE' }}
+                >
+                  {category.name}
+                </span>
+              </div>
+              <button
+                className="h-8 w-8 flex items-center justify-center rounded-lg transition-colors shrink-0"
+                style={{ color: '#6B7280' }}
+                onClick={() => setDeleteConfirm({ open: true, id: category.id })}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {budgetEditing === category.id ? (
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-medium" style={{ color: '#9CA3AF' }}>
+                  Limite mensal
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0,00"
+                    value={budgetValues[category.id] || ''}
+                    onChange={(e) => setBudgetValues(prev => ({ ...prev, [category.id]: e.target.value }))}
+                    disabled={budgetSaving === category.id}
+                    className="text-sm"
+                  />
+                  <button
+                    onClick={() => handleBudgetSave(category.id)}
+                    disabled={budgetSaving === category.id}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-opacity disabled:opacity-50"
+                    style={{
+                      background: 'linear-gradient(135deg, #C9973A, #E8B85C)',
+                      color: '#0D0D12',
+                    }}
+                  >
+                    Salvar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="cursor-pointer p-2 rounded-lg transition-colors"
+                style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+                onClick={() => setBudgetEditing(category.id)}
+              >
+                <p className="text-[11px] mb-0.5" style={{ color: '#6B7280' }}>
+                  Limite mensal
+                </p>
+                <p className="text-sm font-medium" style={{ color: '#E8E8EE' }}>
+                  {budgets?.get(category.id)?.amount_limit
+                    ? formatBRL(budgets.get(category.id)!.amount_limit)
+                    : '—'}
+                </p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <ConfirmDialog
+        open={deleteConfirm.open}
+        title="Deletar Categoria"
+        description="Esta ação não pode ser desfeita. Se há despesas usando esta categoria, elas não serão deletadas, apenas desvinculadas."
+        cancelLabel="Cancelar"
+        confirmLabel="Deletar"
+        variant="destructive"
+        loading={deleting}
+        onCancel={() => setDeleteConfirm({ open: false })}
+        onConfirm={handleDelete}
+      />
+    </>
+  );
+}

@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(npx --version)",
+      "Read(//private/tmp/controle-financeiro/**)",
+      "Bash(cp -r . \"/Users/danilooliveira/Desktop/APP DE CONTROLE FINANCEIRO/\")",
+      "Bash(npm install *)",
+      "Bash(npx shadcn@latest init --yes --defaults)",
+      "Bash(npx shadcn@latest add card input select badge dialog form label textarea popover calendar --yes)",
+      "Bash(npm run *)",
+      "Bash(npm ci *)",
+      "Read(//tmp/**)",
+      "Bash(kill %1)",
+      "Read(//private/tmp/**)",
+      "Bash(pkill -f \"npm run dev\")",
+      "Bash(npm uninstall *)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(curl -s http://localhost:3000/reports)",
+      "Bash(node *)",
+      "Bash(npm cache *)"
+    ]
+  }
+}

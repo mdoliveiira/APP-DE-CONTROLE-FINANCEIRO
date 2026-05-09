@@ -1,36 +1,120 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Controle Financeiro - App de Controle de Gastos
 
-## Getting Started
+Um aplicativo web progressivo (PWA) para controlar suas contas e despesas mensais, acessível tanto no navegador quanto no celular como um aplicativo nativo.
 
-First, run the development server:
+## ✨ Funcionalidades
+
+- **Controle de Despesas**: Adicione, edite e delete suas despesas
+- **Categorias Personalizadas**: Crie e organize suas despesas por categorias com cores
+- **Dashboard Mensal**: Veja um resumo visual de seus gastos pagos e pendentes
+- **Multi-usuário**: Cada usuário vê apenas seus próprios dados
+- **PWA**: Instale no celular como um app nativo (sem precisar da App Store)
+- **Responsivo**: Funciona perfeitamente no desktop, tablet e celular
+- **Offline Ready**: O app continua funcionando mesmo sem conexão (com dados em cache)
+
+## 🚀 Quick Start
+
+### 1. Instalar dependências
+
+```bash
+npm install
+```
+
+### 2. Configurar Supabase
+
+Siga o guia em `SETUP.md` para:
+- Criar um projeto Supabase
+- Configurar o banco de dados
+- Copiar as credenciais para `.env.local`
+
+### 3. Rodar localmente
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra [http://localhost:3000](http://localhost:3000) no navegador.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 4. Criar sua conta
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Clique em "Criar Conta"
+- Preencha com email e senha
+- Acesso ao dashboard automático
 
-## Learn More
+## 📱 Instalar no Celular
 
-To learn more about Next.js, take a look at the following resources:
+### Android (Chrome)
+1. Abra o app no Chrome
+2. Toque no menu (⋮)
+3. Selecione "Instalar app"
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### iOS (Safari)
+1. Abra o app no Safari
+2. Toque no botão de compartilhar (⬆️)
+3. Selecione "Adicionar à Tela Inicial"
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📦 Tech Stack
 
-## Deploy on Vercel
+- **Next.js 14** - Framework React
+- **TypeScript** - Tipagem estática
+- **Tailwind CSS** - Estilos
+- **Supabase** - Backend + Autenticação + Banco de dados
+- **shadcn/ui** - Componentes de UI
+- **react-hook-form + Zod** - Formulários com validação
+- **Recharts** - Gráficos
+- **next-pwa** - Suporte a PWA
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🎯 Estrutura do Projeto
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+├── app/                    # Rotas Next.js App Router
+│   ├── (auth)/            # Rotas de autenticação
+│   ├── (app)/             # Rotas protegidas da app
+│   └── page.tsx           # Home (redireciona)
+├── components/            # Componentes React
+│   ├── ui/                # Componentes shadcn/ui
+│   ├── layout/            # Sidebar, TopBar, etc
+│   ├── shared/            # Componentes compartilhados
+│   ├── dashboard/         # Dashboard
+│   ├── expenses/          # Página de despesas
+│   └── categories/        # Página de categorias
+├── lib/                   # Utilitários e lógica
+│   ├── supabase/          # Clientes Supabase
+│   ├── actions/           # Server Actions
+│   ├── hooks/             # React hooks customizados
+│   ├── utils/             # Funções auxiliares
+│   └── types/             # Tipos TypeScript
+└── middleware.ts          # Proteção de rotas
+```
+
+## 🔐 Segurança com Row Level Security
+
+Todas as queries são protegidas com RLS (Row Level Security) do Supabase, garantindo que:
+- Cada usuário vê apenas seus próprios dados
+- Operações só podem ser feitas no próprio usuário
+- Sem chance de acessar dados de outros usuários
+
+## 🚀 Deploy no Vercel
+
+```bash
+npm install -g vercel
+vercel
+```
+
+Depois configure as variáveis de ambiente no dashboard do Vercel com as credenciais Supabase.
+
+## 📝 Próximos Passos (Roadmap)
+
+- [ ] Integração com WhatsApp para adicionar despesas
+- [ ] Exportar dados em Excel/PDF
+- [ ] Notificações de contas vencendo
+- [ ] Divisão de despesas entre usuários
+- [ ] Relatórios mensais/anuais
+- [ ] Gráficos avançados por categoria
+- [ ] Sincronização com banco de dados
+- [ ] Modo escuro/claro
+
+## 📄 Licença
+
+MIT - Use livremente!
