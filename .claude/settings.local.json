@@ -19,7 +19,13 @@
       "Bash(curl -s http://localhost:3000)",
       "Bash(curl -s http://localhost:3000/reports)",
       "Bash(node *)",
-      "Bash(npm cache *)"
+      "Bash(npm cache *)",
+      "Bash(ssh -T git@github.com)",
+      "Bash(git push *)",
+      "Bash(gh repo *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git config *)"
     ]
   }
 }
