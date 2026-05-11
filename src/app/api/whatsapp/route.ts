@@ -13,7 +13,13 @@ function validateTwilioRequest(
 ): boolean {
   const parsedUrl = new URL(url);
   const path = parsedUrl.pathname + parsedUrl.search;
-  const data = path + new URLSearchParams(params).toString();
+
+  const sortedParams = Object.keys(params)
+    .sort()
+    .map(key => `${key}${params[key]}`)
+    .join('');
+
+  const data = path + sortedParams;
   const hash = createHmac('sha1', authToken).update(data).digest('base64');
   return hash === signature;
 }
