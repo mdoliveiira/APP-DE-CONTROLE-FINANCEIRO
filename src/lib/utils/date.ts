@@ -40,3 +40,9 @@ export function isOverdue(isoDate: string): boolean {
   due.setHours(0, 0, 0, 0);
   return due < today;
 }
+
+export function monthsUntilEndOfYear(date: Date): number {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  return 11 - month;
+}

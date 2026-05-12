@@ -15,10 +15,11 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CurrencyInput } from '@/components/shared/CurrencyInput';
 import { createExpense, updateExpense, createInstallments, createRecurring } from '@/lib/actions/expenses';
-import { formatDate, toMonthKey } from '@/lib/utils/date';
+import { formatDate, toMonthKey, monthsUntilEndOfYear } from '@/lib/utils/date';
 import type { Expense, Category } from '@/lib/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { differenceInMonths } from 'date-fns';
 
 const expenseSchema = z.object({
   category_id: z.string().uuid().nullable().optional(),
@@ -29,6 +30,7 @@ const expenseSchema = z.object({
   notes: z.string().nullable().optional(),
   installment_type: z.enum(['unico', 'parcelado', 'recorrente']),
   installment_count: z.number().int().min(2).max(120).nullable().optional(),
+  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida').nullable().optional(),
 });
 
 type ExpenseFormData = z.infer<typeof expenseSchema>;
@@ -46,6 +48,8 @@ export function ExpenseForm({ expense, categories }: ExpenseFormProps) {
     expense ? new Date(expense.due_date) : new Date()
   );
   const [dueDateOpen, setDueDateOpen] = useState(false);
+  const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
+  const [startDateOpen, setStartDateOpen] = useState(false);
 
   const {
     register,
@@ -64,6 +68,7 @@ export function ExpenseForm({ expense, categories }: ExpenseFormProps) {
       notes: expense?.notes || null,
       installment_type: ('unico' as const),
       installment_count: 2,
+      start_date: null,
     },
   });
 
@@ -71,6 +76,15 @@ export function ExpenseForm({ expense, categories }: ExpenseFormProps) {
   const amount = watch('amount') as unknown as number;
   const installment_type = watch('installment_type');
   const installment_count = watch('installment_count');
+  const start_date = watch('start_date');
+  const selectedCategoryId = watch('category_id');
+
+  const selectedCategory = selectedCategoryId ? categories.find(c => c.id === selectedCategoryId) : null;
+
+  const calculateMonthsToEndOfYear = (startDate: string | null | undefined) => {
+    if (!startDate) return 0;
+    return monthsUntilEndOfYear(new Date(startDate));
+  };
 
   const handleDateSelect = (date: Date | undefined) => {
     if (date) {
@@ -85,14 +99,17 @@ export function ExpenseForm({ expense, categories }: ExpenseFormProps) {
     setError(null);
 
     try {
-      const month = toMonthKey(data.due_date);
+      const dueDate = data.installment_type !== 'unico' && data.start_date ? data.start_date : data.due_date;
+      const month = toMonthKey(dueDate);
+
       const baseExpenseData = {
         category_id: data.category_id || null,
         description: data.description,
         amount: Number(amount),
-        due_date: data.due_date,
+        due_date: dueDate,
         status: data.status,
         month,
+        entity_type: selectedCategory?.entity_type || 'pessoal',
         notes: data.notes || null,
         paid_date: null,
       } as Omit<Expense, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
@@ -105,8 +122,9 @@ export function ExpenseForm({ expense, categories }: ExpenseFormProps) {
       } else {
         if (data.installment_type === 'parcelado' && data.installment_count && data.installment_count > 1) {
           await createInstallments(baseExpenseData, data.installment_count);
-        } else if (data.installment_type === 'recorrente' && data.installment_count && data.installment_count > 1) {
-          await createRecurring(baseExpenseData, data.installment_count);
+        } else if (data.installment_type === 'recorrente') {
+          const monthsToEndOfYear = data.start_date ? calculateMonthsToEndOfYear(data.start_date) : 12;
+          await createRecurring(baseExpenseData, monthsToEndOfYear);
         } else {
           await createExpense(baseExpenseData);
         }
@@ -153,16 +171,29 @@ export function ExpenseForm({ expense, categories }: ExpenseFormProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">Sem categoria</SelectItem>
-              {categories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="h-3 w-3 rounded-full"
-                      style={{ backgroundColor: cat.color }}
-                    />
-                    {cat.name}
-                  </div>
-                </SelectItem>
+              {categories.filter(c => !c.parent_id).map((rootCat) => (
+                <div key={rootCat.id}>
+                  <SelectItem value={rootCat.id}>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="h-3 w-3 rounded-full"
+                        style={{ backgroundColor: rootCat.color }}
+                      />
+                      {rootCat.name}
+                    </div>
+                  </SelectItem>
+                  {categories.filter(c => c.parent_id === rootCat.id).map((subCat) => (
+                    <SelectItem key={subCat.id} value={subCat.id} className="pl-8">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="h-3 w-3 rounded-full"
+                          style={{ backgroundColor: subCat.color }}
+                        />
+                        → {subCat.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </div>
               ))}
             </SelectContent>
           </Select>
@@ -260,23 +291,64 @@ export function ExpenseForm({ expense, categories }: ExpenseFormProps) {
             </div>
 
             {(installment_type === 'parcelado' || installment_type === 'recorrente') && (
-              <div className="space-y-2">
-                <Label htmlFor="installment_count">
-                  {installment_type === 'parcelado' ? 'Número de Parcelas' : 'Por Quantos Meses'}
-                </Label>
-                <Input
-                  id="installment_count"
-                  type="number"
-                  min="2"
-                  max={installment_type === 'parcelado' ? '60' : '120'}
-                  placeholder={installment_type === 'parcelado' ? 'Ex: 6' : 'Ex: 12'}
-                  {...register('installment_count', { valueAsNumber: true })}
-                  disabled={loading}
-                />
-                {errors.installment_count && (
-                  <p className="text-xs" style={{ color: '#F87171' }}>{errors.installment_count.message}</p>
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="start_date">Data de Início</Label>
+                  <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                    <PopoverTrigger>
+                      <Button variant="outline" className="w-full justify-start">
+                        {selectedStartDate ? format(selectedStartDate, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar data...'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={selectedStartDate || undefined}
+                        onSelect={(date) => {
+                          if (date) {
+                            setSelectedStartDate(date);
+                            setValue('start_date', format(date, 'yyyy-MM-dd'));
+                            setStartDateOpen(false);
+                          }
+                        }}
+                        disabled={loading}
+                        locale={ptBR}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {installment_type === 'parcelado' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="installment_count">Número de Parcelas</Label>
+                    <Input
+                      id="installment_count"
+                      type="number"
+                      min="2"
+                      max="60"
+                      placeholder="Ex: 6"
+                      {...register('installment_count', { valueAsNumber: true })}
+                      disabled={loading}
+                    />
+                    {errors.installment_count && (
+                      <p className="text-xs" style={{ color: '#F87171' }}>{errors.installment_count.message}</p>
+                    )}
+                  </div>
                 )}
-              </div>
+
+                {installment_type === 'recorrente' && start_date && (
+                  <div
+                    className="p-3 rounded-lg text-sm"
+                    style={{
+                      backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                      color: '#22C55E',
+                      border: '1px solid rgba(34, 197, 94, 0.2)',
+                    }}
+                  >
+                    {calculateMonthsToEndOfYear(start_date)} meses serão criados ({format(new Date(start_date), 'MMM', { locale: ptBR })} → dez)
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
