@@ -153,12 +153,19 @@ export function CategoryGrid({ categories, budgets, onCategoryDeleted }: Categor
                       className="h-5 w-5 rounded-md shrink-0"
                       style={{ backgroundColor: category.color }}
                     />
-                    <span
-                      className="text-sm font-medium truncate"
-                      style={{ color: '#E8E8EE' }}
-                    >
-                      {category.name}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      <span
+                        className="text-sm font-medium truncate block"
+                        style={{ color: '#E8E8EE' }}
+                      >
+                        {category.parent_id ? '→ ' : ''}{category.name}
+                      </span>
+                      {category.parent_id && (
+                        <span className="text-xs" style={{ color: '#6B7280' }}>
+                          Subcategoria
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex gap-1 shrink-0">
                     <button
