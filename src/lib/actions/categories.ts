@@ -26,7 +26,7 @@ export async function createCategory(name: string, color: string, entityType: 'p
   revalidatePath('/categories');
 }
 
-export async function updateCategory(id: string, name: string, color: string) {
+export async function updateCategory(id: string, name: string, color: string, entityType?: 'pessoal' | 'empresa', parentId?: string | null) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -34,9 +34,13 @@ export async function updateCategory(id: string, name: string, color: string) {
     throw new Error('Unauthorized');
   }
 
+  const updateData: any = { name, color };
+  if (entityType) updateData.entity_type = entityType;
+  if (parentId !== undefined) updateData.parent_id = parentId;
+
   const { error } = await supabase
     .from('categories')
-    .update({ name, color })
+    .update(updateData)
     .eq('id', id)
     .eq('user_id', user.id);
 

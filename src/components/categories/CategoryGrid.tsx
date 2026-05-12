@@ -31,6 +31,8 @@ export function CategoryGrid({ categories, budgets, onCategoryDeleted }: Categor
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [editingColor, setEditingColor] = useState('');
+  const [editingEntityType, setEditingEntityType] = useState<'pessoal' | 'empresa'>('pessoal');
+  const [editingParentId, setEditingParentId] = useState<string | null>(null);
   const [editingSaving, setEditingSaving] = useState(false);
   const [budgetValues, setBudgetValues] = useState<Record<string, string>>(
     Object.fromEntries(
@@ -56,13 +58,15 @@ export function CategoryGrid({ categories, budgets, onCategoryDeleted }: Categor
     setEditingCategory(cat.id);
     setEditingName(cat.name);
     setEditingColor(cat.color);
+    setEditingEntityType(cat.entity_type);
+    setEditingParentId(cat.parent_id || null);
   };
 
   const handleEditSave = async () => {
     if (!editingCategory || !editingName.trim()) return;
     setEditingSaving(true);
     try {
-      await updateCategory(editingCategory, editingName.trim(), editingColor);
+      await updateCategory(editingCategory, editingName.trim(), editingColor, editingEntityType, editingParentId);
       setEditingCategory(null);
     } catch (error) {
       console.error('Erro ao atualizar categoria:', error);
@@ -122,6 +126,51 @@ export function CategoryGrid({ categories, budgets, onCategoryDeleted }: Categor
                     placeholder="Nome da categoria"
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-medium" style={{ color: '#9CA3AF' }}>Tipo</label>
+                  <select
+                    value={editingEntityType}
+                    onChange={(e) => setEditingEntityType(e.target.value as 'pessoal' | 'empresa')}
+                    disabled={editingSaving}
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: '0.375rem',
+                      border: '1px solid rgb(75, 85, 99)',
+                      backgroundColor: 'rgb(31, 41, 55)',
+                      color: 'rgb(229, 231, 235)',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    <option value="pessoal">Pessoal</option>
+                    <option value="empresa">Empresa</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-medium" style={{ color: '#9CA3AF' }}>Categoria Pai</label>
+                  <select
+                    value={editingParentId || ''}
+                    onChange={(e) => setEditingParentId(e.target.value || null)}
+                    disabled={editingSaving}
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: '0.375rem',
+                      border: '1px solid rgb(75, 85, 99)',
+                      backgroundColor: 'rgb(31, 41, 55)',
+                      color: 'rgb(229, 231, 235)',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    <option value="">Nenhuma (categoria raiz)</option>
+                    {categories.filter(c => !c.parent_id && c.id !== editingCategory).map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <ColorPicker value={editingColor} onChange={setEditingColor} />
                 <div className="flex gap-2">
                   <button
