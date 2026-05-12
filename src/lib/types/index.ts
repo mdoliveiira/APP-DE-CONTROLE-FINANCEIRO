@@ -1,6 +1,15 @@
 export type ExpenseStatus = 'pago' | 'pendente';
 export type EntityType = 'pessoal' | 'empresa';
 
+export interface CreditCard {
+  id: string;
+  user_id: string;
+  name: string;
+  color: string;
+  due_day: number;
+  created_at: string;
+}
+
 export interface Category {
   id: string;
   user_id: string;
@@ -16,6 +25,7 @@ export interface Expense {
   user_id: string;
   category_id: string | null;
   category?: Category;
+  credit_card_id?: string | null;
   description: string;
   amount: number;
   due_date: string;

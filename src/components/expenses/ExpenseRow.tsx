@@ -4,12 +4,13 @@ import { Edit2, Trash2, CheckCircle, Circle } from 'lucide-react';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { formatBRL } from '@/lib/utils/currency';
 import { formatDate, isOverdue } from '@/lib/utils/date';
-import type { Expense, Category } from '@/lib/types';
+import type { Expense, Category, CreditCard } from '@/lib/types';
 import Link from 'next/link';
 
 interface ExpenseRowProps {
   expense: Expense;
   category?: Category;
+  creditCard?: CreditCard;
   onMarkPaid?: (id: string) => void;
   onMarkPending?: (id: string) => void;
   onDelete?: (id: string) => void;
@@ -18,6 +19,7 @@ interface ExpenseRowProps {
 export function ExpenseRow({
   expense,
   category,
+  creditCard,
   onMarkPaid,
   onMarkPending,
   onDelete,
@@ -49,15 +51,29 @@ export function ExpenseRow({
             {expense.description}
           </h4>
         </div>
-        <p
-          className="text-xs font-medium"
-          style={{ color: overdue ? '#F87171' : '#6B7280' }}
-        >
-          {overdue ? '⚠ Venceu: ' : 'Vence: '}{formatDate(expense.due_date)}
-          {expense.paid_date && (
-            <span style={{ color: '#6B7280' }}> · Pago: {formatDate(expense.paid_date)}</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <p
+            className="text-xs font-medium"
+            style={{ color: overdue ? '#F87171' : '#6B7280' }}
+          >
+            {overdue ? '⚠ Venceu: ' : 'Vence: '}{formatDate(expense.due_date)}
+            {expense.paid_date && (
+              <span style={{ color: '#6B7280' }}> · Pago: {formatDate(expense.paid_date)}</span>
+            )}
+          </p>
+          {creditCard && (
+            <span
+              className="text-xs px-2 py-1 rounded-lg"
+              style={{
+                backgroundColor: `${creditCard.color}20`,
+                color: creditCard.color,
+                border: `1px solid ${creditCard.color}40`,
+              }}
+            >
+              {creditCard.name}
+            </span>
           )}
-        </p>
+        </div>
       </div>
 
       <div className="flex items-center gap-2 shrink-0">

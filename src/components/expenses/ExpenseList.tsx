@@ -5,16 +5,17 @@ import { ExpenseRow } from './ExpenseRow';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { markExpensePaid, markExpensePending, deleteExpense } from '@/lib/actions/expenses';
-import type { Expense, Category } from '@/lib/types';
+import type { Expense, Category, CreditCard } from '@/lib/types';
 import { format } from 'date-fns';
 import { isOverdue } from '@/lib/utils/date';
 
 interface ExpenseListProps {
   expenses: Expense[];
   categories: Record<string, Category>;
+  creditCards?: Record<string, CreditCard>;
 }
 
-export function ExpenseList({ expenses, categories }: ExpenseListProps) {
+export function ExpenseList({ expenses, categories, creditCards = {} }: ExpenseListProps) {
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id?: string }>({ open: false });
   const [deleting, setDeleting] = useState(false);
 
@@ -92,6 +93,9 @@ export function ExpenseList({ expenses, categories }: ExpenseListProps) {
                   expense={expense}
                   category={
                     expense.category_id ? categories[expense.category_id] : undefined
+                  }
+                  creditCard={
+                    expense.credit_card_id ? creditCards[expense.credit_card_id] : undefined
                   }
                   onMarkPaid={handleMarkPaid}
                   onMarkPending={handleMarkPending}

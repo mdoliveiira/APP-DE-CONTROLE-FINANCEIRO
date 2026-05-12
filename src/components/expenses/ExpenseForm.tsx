@@ -14,15 +14,16 @@ import { Card } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CurrencyInput } from '@/components/shared/CurrencyInput';
-import { createExpense, updateExpense, createInstallments, createRecurring } from '@/lib/actions/expenses';
+import { createExpense, updateExpense, createInstallments, createRecurring, deleteExpense } from '@/lib/actions/expenses';
 import { formatDate, toMonthKey, monthsUntilEndOfYear } from '@/lib/utils/date';
-import type { Expense, Category } from '@/lib/types';
+import type { Expense, Category, CreditCard } from '@/lib/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { differenceInMonths } from 'date-fns';
 
 const expenseSchema = z.object({
   category_id: z.string().uuid().nullable().optional(),
+  credit_card_id: z.string().uuid().nullable().optional(),
   description: z.string().min(1, 'Descrição obrigatória').max(200),
   amount: z.number().positive('Valor deve ser maior que zero'),
   due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida'),
@@ -38,9 +39,10 @@ type ExpenseFormData = z.infer<typeof expenseSchema>;
 interface ExpenseFormProps {
   expense?: Expense;
   categories: Category[];
+  creditCards?: CreditCard[];
 }
 
-export function ExpenseForm({ expense, categories }: ExpenseFormProps) {
+export function ExpenseForm({ expense, categories, creditCards = [] }: ExpenseFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +63,7 @@ export function ExpenseForm({ expense, categories }: ExpenseFormProps) {
     resolver: zodResolver(expenseSchema),
     defaultValues: {
       category_id: expense?.category_id || undefined,
+      credit_card_id: expense?.credit_card_id || undefined,
       description: expense?.description || '',
       amount: expense?.amount || 0,
       due_date: expense?.due_date || format(new Date(), 'yyyy-MM-dd'),
@@ -104,6 +107,7 @@ export function ExpenseForm({ expense, categories }: ExpenseFormProps) {
 
       const baseExpenseData = {
         category_id: data.category_id || null,
+        credit_card_id: data.credit_card_id || null,
         description: data.description,
         amount: Number(amount),
         due_date: dueDate,
@@ -115,10 +119,22 @@ export function ExpenseForm({ expense, categories }: ExpenseFormProps) {
       } as Omit<Expense, 'id' | 'user_id' | 'created_at' | 'updated_at'>;
 
       if (expense) {
-        await updateExpense(expense.id, {
-          ...baseExpenseData,
-          status: data.status,
-        });
+        if (data.installment_type !== 'unico') {
+          // Delete original expense and create installments from scratch
+          await deleteExpense(expense.id);
+          if (data.installment_type === 'parcelado' && data.installment_count && data.installment_count > 1) {
+            await createInstallments(baseExpenseData, data.installment_count);
+          } else if (data.installment_type === 'recorrente') {
+            const monthsToEndOfYear = data.start_date ? calculateMonthsToEndOfYear(data.start_date) : 12;
+            await createRecurring(baseExpenseData, monthsToEndOfYear);
+          }
+        } else {
+          // Simple update for single expenses
+          await updateExpense(expense.id, {
+            ...baseExpenseData,
+            status: data.status,
+          });
+        }
       } else {
         if (data.installment_type === 'parcelado' && data.installment_count && data.installment_count > 1) {
           await createInstallments(baseExpenseData, data.installment_count);
@@ -199,6 +215,34 @@ export function ExpenseForm({ expense, categories }: ExpenseFormProps) {
           </Select>
         </div>
 
+        {creditCards.length > 0 && (
+          <div className="space-y-2">
+            <Label htmlFor="credit_card">Cartão de Crédito (opcional)</Label>
+            <Select
+              value={watch('credit_card_id') || ''}
+              onValueChange={(value) => setValue('credit_card_id', value || null)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecionar cartão..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Nenhum cartão</SelectItem>
+                {creditCards.map((card) => (
+                  <SelectItem key={card.id} value={card.id}>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="h-3 w-3 rounded-full"
+                        style={{ backgroundColor: card.color }}
+                      />
+                      {card.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <div className="space-y-2">
           <Label htmlFor="description">Descrição</Label>
           <Input
@@ -271,84 +315,80 @@ export function ExpenseForm({ expense, categories }: ExpenseFormProps) {
           />
         </div>
 
-        {!expense && (
+        <div className="space-y-2">
+          <Label htmlFor="installment_type">Tipo de Despesa</Label>
+          <Select
+            value={installment_type}
+            onValueChange={(value) => setValue('installment_type', value as 'unico' | 'parcelado' | 'recorrente')}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unico">Pagamento Único</SelectItem>
+              <SelectItem value="parcelado">Parcelado (ex: 6x)</SelectItem>
+              <SelectItem value="recorrente">Recorrente (todo mês)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {(installment_type === 'parcelado' || installment_type === 'recorrente') && (
           <>
             <div className="space-y-2">
-              <Label htmlFor="installment_type">Tipo de Despesa</Label>
-              <Select
-                value={installment_type}
-                onValueChange={(value) => setValue('installment_type', value as 'unico' | 'parcelado' | 'recorrente')}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unico">Pagamento Único</SelectItem>
-                  <SelectItem value="parcelado">Parcelado (ex: 6x)</SelectItem>
-                  <SelectItem value="recorrente">Recorrente (todo mês)</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="start_date">Data de Início</Label>
+              <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                <PopoverTrigger>
+                  <Button variant="outline" className="w-full justify-start">
+                    {selectedStartDate ? format(selectedStartDate, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar data...'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={selectedStartDate || undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        setSelectedStartDate(date);
+                        setValue('start_date', format(date, 'yyyy-MM-dd'));
+                        setStartDateOpen(false);
+                      }
+                    }}
+                    disabled={loading}
+                    locale={ptBR}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
-            {(installment_type === 'parcelado' || installment_type === 'recorrente') && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="start_date">Data de Início</Label>
-                  <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
-                    <PopoverTrigger>
-                      <Button variant="outline" className="w-full justify-start">
-                        {selectedStartDate ? format(selectedStartDate, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar data...'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent align="start" className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={selectedStartDate || undefined}
-                        onSelect={(date) => {
-                          if (date) {
-                            setSelectedStartDate(date);
-                            setValue('start_date', format(date, 'yyyy-MM-dd'));
-                            setStartDateOpen(false);
-                          }
-                        }}
-                        disabled={loading}
-                        locale={ptBR}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {installment_type === 'parcelado' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="installment_count">Número de Parcelas</Label>
-                    <Input
-                      id="installment_count"
-                      type="number"
-                      min="2"
-                      max="60"
-                      placeholder="Ex: 6"
-                      {...register('installment_count', { valueAsNumber: true })}
-                      disabled={loading}
-                    />
-                    {errors.installment_count && (
-                      <p className="text-xs" style={{ color: '#F87171' }}>{errors.installment_count.message}</p>
-                    )}
-                  </div>
+            {installment_type === 'parcelado' && (
+              <div className="space-y-2">
+                <Label htmlFor="installment_count">Número de Parcelas</Label>
+                <Input
+                  id="installment_count"
+                  type="number"
+                  min="2"
+                  max="60"
+                  placeholder="Ex: 6"
+                  {...register('installment_count', { valueAsNumber: true })}
+                  disabled={loading}
+                />
+                {errors.installment_count && (
+                  <p className="text-xs" style={{ color: '#F87171' }}>{errors.installment_count.message}</p>
                 )}
+              </div>
+            )}
 
-                {installment_type === 'recorrente' && start_date && (
-                  <div
-                    className="p-3 rounded-lg text-sm"
-                    style={{
-                      backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                      color: '#22C55E',
-                      border: '1px solid rgba(34, 197, 94, 0.2)',
-                    }}
-                  >
-                    {calculateMonthsToEndOfYear(start_date)} meses serão criados ({format(new Date(start_date), 'MMM', { locale: ptBR })} → dez)
-                  </div>
-                )}
-              </>
+            {installment_type === 'recorrente' && start_date && (
+              <div
+                className="p-3 rounded-lg text-sm"
+                style={{
+                  backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                  color: '#22C55E',
+                  border: '1px solid rgba(34, 197, 94, 0.2)',
+                }}
+              >
+                {calculateMonthsToEndOfYear(start_date)} meses serão criados ({format(new Date(start_date), 'MMM', { locale: ptBR })} → dez)
+              </div>
             )}
           </>
         )}

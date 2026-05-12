@@ -32,6 +32,12 @@ export default async function ExpenseEditPage({ params }: ExpenseEditPageProps) 
     .eq('user_id', user?.id)
     .order('created_at', { ascending: false });
 
+  const { data: creditCards } = await supabase
+    .from('credit_cards')
+    .select('*')
+    .eq('user_id', user?.id)
+    .order('created_at', { ascending: false });
+
   return (
     <div className="flex flex-col h-full">
       <MonthSelector />
@@ -49,6 +55,7 @@ export default async function ExpenseEditPage({ params }: ExpenseEditPageProps) 
           <ExpenseForm
             expense={expense}
             categories={categories || []}
+            creditCards={creditCards || []}
           />
         </div>
       </div>

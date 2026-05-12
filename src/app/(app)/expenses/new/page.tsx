@@ -15,6 +15,12 @@ export default async function NewExpensePage() {
     .eq('user_id', user?.id)
     .order('created_at', { ascending: false });
 
+  const { data: creditCards } = await supabase
+    .from('credit_cards')
+    .select('*')
+    .eq('user_id', user?.id)
+    .order('created_at', { ascending: false });
+
   return (
     <div className="flex flex-col h-full">
       <MonthSelector />
@@ -29,7 +35,7 @@ export default async function NewExpensePage() {
             </Link>
           </div>
 
-          <ExpenseForm categories={categories || []} />
+          <ExpenseForm categories={categories || []} creditCards={creditCards || []} />
         </div>
       </div>
     </div>

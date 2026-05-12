@@ -7,7 +7,7 @@ import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { isOverdue } from '@/lib/utils/date';
-import type { Expense, Category, EntityType } from '@/lib/types';
+import type { Expense, Category, EntityType, CreditCard } from '@/lib/types';
 
 export default async function ExpensesPage({
   searchParams,
@@ -24,15 +24,19 @@ export default async function ExpensesPage({
   const status = params.status || 'todas';
   const categoryId = params.category_id || null;
   const search = params.search || null;
-  const entityType = (params.entity_type || 'pessoal') as EntityType;
+  const entityType = (params.entity_type || 'todos') as EntityType | 'todos';
 
   let query = supabase
     .from('expenses')
     .select('*')
     .eq('user_id', user?.id)
-    .eq('month', month)
-    .eq('entity_type', entityType)
-    .order('due_date', { ascending: true });
+    .eq('month', month);
+
+  if (entityType !== 'todos') {
+    query = query.eq('entity_type', entityType);
+  }
+
+  query = query.order('due_date', { ascending: true });
 
   // Apply status filter
   if (status === 'vencidas') {
@@ -60,8 +64,18 @@ export default async function ExpensesPage({
     .eq('user_id', user?.id)
     .order('created_at', { ascending: false });
 
+  const { data: creditCards } = await supabase
+    .from('credit_cards')
+    .select('*')
+    .eq('user_id', user?.id)
+    .order('created_at', { ascending: false });
+
   const categoriesRecord: Record<string, Category> = Object.fromEntries(
     (categories || []).map((cat: Category) => [cat.id, cat])
+  );
+
+  const creditCardsRecord: Record<string, CreditCard> = Object.fromEntries(
+    (creditCards || []).map((card: CreditCard) => [card.id, card])
   );
 
   return (
@@ -90,6 +104,24 @@ export default async function ExpensesPage({
         </div>
 
         <div className="flex gap-2 border-b" style={{ borderColor: '#374151' }}>
+          <Link
+            href={`/expenses?month=${month}&entity_type=todos`}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              entityType === 'todos'
+                ? 'border-b-2'
+                : ''
+            }`}
+            style={
+              entityType === 'todos'
+                ? {
+                    color: '#C9973A',
+                    borderColor: '#C9973A',
+                  }
+                : { color: '#6B7280' }
+            }
+          >
+            Todos
+          </Link>
           <Link
             href={`/expenses?month=${month}&entity_type=pessoal`}
             className={`px-4 py-2 text-sm font-medium transition-colors ${
@@ -128,11 +160,12 @@ export default async function ExpensesPage({
           </Link>
         </div>
 
-        <ExpenseFilters categories={categories || []} />
+        <ExpenseFilters categories={categories || []} entityType={entityType} />
 
         <ExpenseList
           expenses={(expenses || []) as Expense[]}
           categories={categoriesRecord}
+          creditCards={creditCardsRecord}
         />
       </div>
 

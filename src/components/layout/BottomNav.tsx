@@ -1,12 +1,13 @@
 'use client';
 
-import { BarChart3, Home, Tag, BarChart2, Settings } from 'lucide-react';
+import { BarChart3, Home, Tag, BarChart2, Settings, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const navItems = [
   { href: '/dashboard', icon: Home, label: 'Dashboard' },
   { href: '/expenses', icon: BarChart3, label: 'Contas' },
+  { href: '/credit-cards', icon: CreditCard, label: 'Cartões' },
   { href: '/reports', icon: BarChart2, label: 'Relatórios' },
   { href: '/categories', icon: Tag, label: 'Categorias' },
   { href: '/settings', icon: Settings, label: 'Configurações' },

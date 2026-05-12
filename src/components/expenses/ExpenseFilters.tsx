@@ -6,13 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
-import type { Category } from '@/lib/types';
+import type { Category, EntityType } from '@/lib/types';
 
 interface ExpenseFiltersProps {
   categories: Category[];
+  entityType?: EntityType | 'todos';
 }
 
-export function ExpenseFilters({ categories }: ExpenseFiltersProps) {
+export function ExpenseFilters({ categories, entityType = 'todos' }: ExpenseFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -22,7 +23,7 @@ export function ExpenseFilters({ categories }: ExpenseFiltersProps) {
 
   const applyFilters = useCallback(() => {
     const params = new URLSearchParams(searchParams);
-    const month = params.get('month'); // preservar mês
+    const month = params.get('month');
 
     params.delete('status');
     params.delete('category_id');
@@ -32,15 +33,17 @@ export function ExpenseFilters({ categories }: ExpenseFiltersProps) {
     if (categoryId) params.set('category_id', categoryId);
     if (search) params.set('search', search);
     if (month) params.set('month', month);
+    if (entityType !== 'todos') params.set('entity_type', entityType);
 
     const query = params.toString();
     router.push(`/expenses${query ? '?' + query : ''}`);
-  }, [router, searchParams, status, categoryId, search]);
+  }, [router, searchParams, status, categoryId, search, entityType]);
 
   const clearFilters = useCallback(() => {
     const params = new URLSearchParams();
     const month = searchParams.get('month');
     if (month) params.set('month', month);
+    if (entityType !== 'todos') params.set('entity_type', entityType);
 
     setStatus('todas');
     setCategoryId('');
@@ -48,7 +51,7 @@ export function ExpenseFilters({ categories }: ExpenseFiltersProps) {
 
     const query = params.toString();
     router.push(`/expenses${query ? '?' + query : ''}`);
-  }, [router, searchParams]);
+  }, [router, searchParams, entityType]);
 
   const hasFilters = status !== 'todas' || categoryId || search;
 
