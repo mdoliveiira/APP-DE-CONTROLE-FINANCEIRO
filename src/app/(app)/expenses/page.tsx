@@ -7,12 +7,12 @@ import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { isOverdue } from '@/lib/utils/date';
-import type { Expense, Category } from '@/lib/types';
+import type { Expense, Category, EntityType } from '@/lib/types';
 
 export default async function ExpensesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; status?: string; category_id?: string; search?: string }>;
+  searchParams: Promise<{ month?: string; status?: string; category_id?: string; search?: string; entity_type?: string }>;
 }) {
   const params = await searchParams;
   const supabase = await createClient();
@@ -24,12 +24,14 @@ export default async function ExpensesPage({
   const status = params.status || 'todas';
   const categoryId = params.category_id || null;
   const search = params.search || null;
+  const entityType = (params.entity_type || 'pessoal') as EntityType;
 
   let query = supabase
     .from('expenses')
     .select('*')
     .eq('user_id', user?.id)
     .eq('month', month)
+    .eq('entity_type', entityType)
     .order('due_date', { ascending: true });
 
   // Apply status filter
@@ -84,6 +86,45 @@ export default async function ExpensesPage({
               <span className="hidden sm:inline">Nova Despesa</span>
               <span className="sm:hidden">Novo</span>
             </Button>
+          </Link>
+        </div>
+
+        <div className="flex gap-2 border-b" style={{ borderColor: '#374151' }}>
+          <Link
+            href={`/expenses?month=${month}&entity_type=pessoal`}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              entityType === 'pessoal'
+                ? 'border-b-2'
+                : ''
+            }`}
+            style={
+              entityType === 'pessoal'
+                ? {
+                    color: '#C9973A',
+                    borderColor: '#C9973A',
+                  }
+                : { color: '#6B7280' }
+            }
+          >
+            Pessoal
+          </Link>
+          <Link
+            href={`/expenses?month=${month}&entity_type=empresa`}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              entityType === 'empresa'
+                ? 'border-b-2'
+                : ''
+            }`}
+            style={
+              entityType === 'empresa'
+                ? {
+                    color: '#C9973A',
+                    borderColor: '#C9973A',
+                  }
+                : { color: '#6B7280' }
+            }
+          >
+            Empresa
           </Link>
         </div>
 
