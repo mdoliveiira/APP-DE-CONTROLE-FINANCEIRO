@@ -7,17 +7,22 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { ColorPicker } from './ColorPicker';
 import { createCategory } from '@/lib/actions/categories';
-import type { Category } from '@/lib/types';
+import type { Category, EntityType } from '@/lib/types';
 
 interface CategoryFormProps {
   onSuccess?: () => void;
+  categories?: Category[];
 }
 
-export function CategoryForm({ onSuccess }: CategoryFormProps) {
+export function CategoryForm({ onSuccess, categories = [] }: CategoryFormProps) {
   const [name, setName] = useState('');
   const [color, setColor] = useState('#6366f1');
+  const [entityType, setEntityType] = useState<EntityType>('pessoal');
+  const [parentId, setParentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const rootCategories = categories.filter(c => !c.parent_id);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,9 +30,10 @@ export function CategoryForm({ onSuccess }: CategoryFormProps) {
     setLoading(true);
 
     try {
-      await createCategory(name, color);
+      await createCategory(name, color, entityType, parentId);
       setName('');
       setColor('#6366f1');
+      setParentId(null);
       onSuccess?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar categoria');
@@ -70,6 +76,52 @@ export function CategoryForm({ onSuccess }: CategoryFormProps) {
             disabled={loading}
           />
         </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="entityType">Tipo</Label>
+          <select
+            id="entityType"
+            value={entityType}
+            onChange={(e) => setEntityType(e.target.value as EntityType)}
+            disabled={loading}
+            style={{
+              width: '100%',
+              padding: '0.5rem 0.75rem',
+              borderRadius: '0.375rem',
+              border: '1px solid rgb(75, 85, 99)',
+              backgroundColor: 'rgb(31, 41, 55)',
+              color: 'rgb(229, 231, 235)',
+            }}
+          >
+            <option value="pessoal">Pessoal</option>
+            <option value="empresa">Empresa</option>
+          </select>
+        </div>
+
+        {rootCategories.length > 0 && (
+          <div className="space-y-2">
+            <Label htmlFor="parentId">Categoria Pai (opcional)</Label>
+            <select
+              id="parentId"
+              value={parentId || ''}
+              onChange={(e) => setParentId(e.target.value || null)}
+              disabled={loading}
+              style={{
+                width: '100%',
+                padding: '0.5rem 0.75rem',
+                borderRadius: '0.375rem',
+                border: '1px solid rgb(75, 85, 99)',
+                backgroundColor: 'rgb(31, 41, 55)',
+                color: 'rgb(229, 231, 235)',
+              }}
+            >
+              <option value="">Nenhuma (categoria raiz)</option>
+              {rootCategories.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label>Cor</Label>

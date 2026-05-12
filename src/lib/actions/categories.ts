@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 
-export async function createCategory(name: string, color: string) {
+export async function createCategory(name: string, color: string, entityType: 'pessoal' | 'empresa' = 'pessoal', parentId: string | null = null) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -15,6 +15,8 @@ export async function createCategory(name: string, color: string) {
     user_id: user.id,
     name,
     color,
+    entity_type: entityType,
+    parent_id: parentId,
   });
 
   if (error) {

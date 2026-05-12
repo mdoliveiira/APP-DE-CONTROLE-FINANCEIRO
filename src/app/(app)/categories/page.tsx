@@ -39,7 +39,7 @@ export default async function CategoriesPage() {
           </p>
         </div>
 
-        <CategoryForm />
+        <CategoryForm categories={categories || []} />
 
         <div>
           <h2
