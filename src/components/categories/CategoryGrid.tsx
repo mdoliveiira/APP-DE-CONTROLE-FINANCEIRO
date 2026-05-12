@@ -1,13 +1,14 @@
 'use client';
 
 import { Input } from '@/components/ui/input';
-import { deleteCategory } from '@/lib/actions/categories';
+import { deleteCategory, updateCategory } from '@/lib/actions/categories';
 import { upsertBudget, deleteBudget } from '@/lib/actions/budgets';
 import { formatBRL } from '@/lib/utils/currency';
 import type { Category, Budget } from '@/lib/types';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Edit2 } from 'lucide-react';
 import { useState } from 'react';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
+import { ColorPicker } from './ColorPicker';
 
 interface CategoryGridProps {
   categories: Category[];
@@ -27,6 +28,10 @@ export function CategoryGrid({ categories, budgets, onCategoryDeleted }: Categor
   const [deleting, setDeleting] = useState(false);
   const [budgetEditing, setBudgetEditing] = useState<string | null>(null);
   const [budgetSaving, setBudgetSaving] = useState<string | null>(null);
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [editingColor, setEditingColor] = useState('');
+  const [editingSaving, setEditingSaving] = useState(false);
   const [budgetValues, setBudgetValues] = useState<Record<string, string>>(
     Object.fromEntries(
       categories.map(cat => [cat.id, budgets?.get(cat.id)?.amount_limit.toString() || ''])
@@ -44,6 +49,25 @@ export function CategoryGrid({ categories, budgets, onCategoryDeleted }: Categor
       console.error('Erro ao deletar categoria:', error);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleEditStart = (cat: Category) => {
+    setEditingCategory(cat.id);
+    setEditingName(cat.name);
+    setEditingColor(cat.color);
+  };
+
+  const handleEditSave = async () => {
+    if (!editingCategory || !editingName.trim()) return;
+    setEditingSaving(true);
+    try {
+      await updateCategory(editingCategory, editingName.trim(), editingColor);
+      setEditingCategory(null);
+    } catch (error) {
+      console.error('Erro ao atualizar categoria:', error);
+    } finally {
+      setEditingSaving(false);
     }
   };
 
@@ -86,29 +110,75 @@ export function CategoryGrid({ categories, budgets, onCategoryDeleted }: Categor
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
         {categories.map((category) => (
           <div key={category.id} style={cardStyle} className="space-y-3">
-            <div className="flex items-center gap-3 justify-between">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div
-                  className="h-5 w-5 rounded-md shrink-0"
-                  style={{ backgroundColor: category.color }}
-                />
-                <span
-                  className="text-sm font-medium truncate"
-                  style={{ color: '#E8E8EE' }}
-                >
-                  {category.name}
-                </span>
-              </div>
-              <button
-                className="h-8 w-8 flex items-center justify-center rounded-lg transition-colors shrink-0"
-                style={{ color: '#6B7280' }}
-                onClick={() => setDeleteConfirm({ open: true, id: category.id })}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
+            {editingCategory === category.id ? (
+              <>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium" style={{ color: '#9CA3AF' }}>Nome</label>
+                  <Input
+                    type="text"
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    disabled={editingSaving}
+                    placeholder="Nome da categoria"
+                  />
+                </div>
+                <ColorPicker value={editingColor} onChange={setEditingColor} />
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleEditSave}
+                    disabled={editingSaving || !editingName.trim()}
+                    className="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-opacity disabled:opacity-50"
+                    style={{
+                      background: 'linear-gradient(135deg, #C9973A, #E8B85C)',
+                      color: '#0D0D12',
+                    }}
+                  >
+                    {editingSaving ? 'Salvando...' : 'Salvar'}
+                  </button>
+                  <button
+                    onClick={() => setEditingCategory(null)}
+                    disabled={editingSaving}
+                    className="flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                    style={{ color: '#6B7280' }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 justify-between">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div
+                      className="h-5 w-5 rounded-md shrink-0"
+                      style={{ backgroundColor: category.color }}
+                    />
+                    <span
+                      className="text-sm font-medium truncate"
+                      style={{ color: '#E8E8EE' }}
+                    >
+                      {category.name}
+                    </span>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <button
+                      className="h-8 w-8 flex items-center justify-center rounded-lg transition-colors"
+                      style={{ color: '#6B7280' }}
+                      onClick={() => handleEditStart(category)}
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      className="h-8 w-8 flex items-center justify-center rounded-lg transition-colors"
+                      style={{ color: '#6B7280' }}
+                      onClick={() => setDeleteConfirm({ open: true, id: category.id })}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
 
-            {budgetEditing === category.id ? (
+                {budgetEditing === category.id ? (
               <div className="space-y-1.5">
                 <label className="text-[11px] font-medium" style={{ color: '#9CA3AF' }}>
                   Limite mensal
@@ -152,6 +222,8 @@ export function CategoryGrid({ categories, budgets, onCategoryDeleted }: Categor
                     : '—'}
                 </p>
               </div>
+                )}
+              </>
             )}
           </div>
         ))}

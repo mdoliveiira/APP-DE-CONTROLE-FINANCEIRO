@@ -1,10 +1,13 @@
 export type ExpenseStatus = 'pago' | 'pendente';
+export type EntityType = 'pessoal' | 'empresa';
 
 export interface Category {
   id: string;
   user_id: string;
   name: string;
   color: string;
+  entity_type: EntityType;
+  parent_id: string | null;
   created_at: string;
 }
 
@@ -19,6 +22,7 @@ export interface Expense {
   paid_date: string | null;
   status: ExpenseStatus;
   month: string;
+  entity_type: EntityType;
   notes: string | null;
   created_at: string;
   updated_at: string;
