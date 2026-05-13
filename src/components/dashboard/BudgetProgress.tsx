@@ -1,16 +1,22 @@
 'use client';
 
 import { formatBRL } from '@/lib/utils/currency';
-import type { Budget, Category } from '@/lib/types';
+import type { Budget, Category, EntityType } from '@/lib/types';
 
 interface BudgetProgressProps {
   budgets: Budget[];
   categories: Map<string, Category>;
   spendingByCategory: Record<string, number>;
+  entityType?: EntityType;
 }
 
-export function BudgetProgress({ budgets, categories, spendingByCategory }: BudgetProgressProps) {
-  if (budgets.length === 0) {
+export function BudgetProgress({ budgets, categories, spendingByCategory, entityType = 'pessoal' }: BudgetProgressProps) {
+  const filteredBudgets = budgets.filter((budget) => {
+    const category = categories.get(budget.category_id);
+    return category?.entity_type === entityType;
+  });
+
+  if (filteredBudgets.length === 0) {
     return null;
   }
 
@@ -30,7 +36,7 @@ export function BudgetProgress({ budgets, categories, spendingByCategory }: Budg
       </h2>
 
       <div className="space-y-5">
-        {budgets.map((budget) => {
+        {filteredBudgets.map((budget) => {
           const category = categories.get(budget.category_id);
           const spent = spendingByCategory[budget.category_id] || 0;
           const percentage = (spent / budget.amount_limit) * 100;

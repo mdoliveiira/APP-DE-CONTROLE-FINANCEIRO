@@ -12,7 +12,7 @@ import type { Expense, Category, EntityType, CreditCard } from '@/lib/types';
 export default async function ExpensesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; status?: string; category_id?: string; search?: string; entity_type?: string }>;
+  searchParams: Promise<{ month?: string; status?: string; category_id?: string; credit_card_id?: string; search?: string; entity_type?: string }>;
 }) {
   const params = await searchParams;
   const supabase = await createClient();
@@ -23,6 +23,7 @@ export default async function ExpensesPage({
   const month = params.month || currentMonth;
   const status = params.status || 'todas';
   const categoryId = params.category_id || null;
+  const creditCardId = params.credit_card_id || null;
   const search = params.search || null;
   const entityType = (params.entity_type || 'todos') as EntityType | 'todos';
 
@@ -49,6 +50,11 @@ export default async function ExpensesPage({
   // Apply category filter
   if (categoryId) {
     query = query.eq('category_id', categoryId);
+  }
+
+  // Apply credit card filter
+  if (creditCardId) {
+    query = query.eq('credit_card_id', creditCardId);
   }
 
   // Apply search filter
@@ -160,7 +166,11 @@ export default async function ExpensesPage({
           </Link>
         </div>
 
-        <ExpenseFilters categories={categories || []} entityType={entityType} />
+        <ExpenseFilters
+          categories={categories || []}
+          entityType={entityType}
+          creditCards={creditCardsRecord}
+        />
 
         <ExpenseList
           expenses={(expenses || []) as Expense[]}

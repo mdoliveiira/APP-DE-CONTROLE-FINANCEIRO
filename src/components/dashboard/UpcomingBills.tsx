@@ -3,6 +3,7 @@ import { formatBRL } from '@/lib/utils/currency';
 import { formatDate } from '@/lib/utils/date';
 import type { Expense, Category } from '@/lib/types';
 import Link from 'next/link';
+import { differenceInDays } from 'date-fns';
 
 const cardStyle = {
   backgroundColor: '#141419',
@@ -17,6 +18,24 @@ interface UpcomingBillsProps {
 }
 
 export function UpcomingBills({ bills, categories }: UpcomingBillsProps) {
+  const getUrgencyColor = (dueDate: string) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
+    const daysUntil = differenceInDays(due, today);
+
+    if (daysUntil < 0) {
+      return { bg: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', label: 'Venceu!', color: '#F87171' };
+    } else if (daysUntil === 0) {
+      return { bg: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', label: 'Vence hoje!', color: '#F87171' };
+    } else if (daysUntil <= 3) {
+      return { bg: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.3)', label: `Em ${daysUntil} dia${daysUntil !== 1 ? 's' : ''}`, color: '#F97316' };
+    } else {
+      return { bg: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', label: `Em ${daysUntil} dias`, color: '#F59E0B' };
+    }
+  };
+
   if (bills.length === 0) {
     return (
       <div style={cardStyle}>
@@ -46,12 +65,13 @@ export function UpcomingBills({ bills, categories }: UpcomingBillsProps) {
       <div className="space-y-2">
         {bills.map((bill) => {
           const category = bill.category_id ? categories.get(bill.category_id) : undefined;
+          const urgency = getUrgencyColor(bill.due_date);
           return (
             <Link
               key={bill.id}
               href={`/expenses/${bill.id}`}
               className="flex items-center justify-between rounded-xl p-3 transition-colors"
-              style={{ border: '1px solid rgba(255,255,255,0.06)' }}
+              style={{ backgroundColor: urgency.bg, border: urgency.border }}
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 {category && (
@@ -60,12 +80,12 @@ export function UpcomingBills({ bills, categories }: UpcomingBillsProps) {
                     style={{ backgroundColor: category.color }}
                   />
                 )}
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium truncate" style={{ color: '#E8E8EE' }}>
                     {bill.description}
                   </p>
-                  <p className="text-xs" style={{ color: '#6B7280' }}>
-                    Vence: {formatDate(bill.due_date)}
+                  <p className="text-xs" style={{ color: urgency.color }}>
+                    {urgency.label}
                   </p>
                 </div>
               </div>

@@ -1,5 +1,5 @@
 import { formatBRL } from '@/lib/utils/currency';
-import { BarChart3, CheckCircle, Clock, DollarSign } from 'lucide-react';
+import { BarChart3, CheckCircle, Clock, DollarSign, TrendingUp } from 'lucide-react';
 
 interface SummaryCardsProps {
   totalAmount: number;
@@ -7,6 +7,8 @@ interface SummaryCardsProps {
   totalPending: number;
   countPaid: number;
   countPending: number;
+  totalIncome?: number;
+  saldo?: number;
 }
 
 export function SummaryCards({
@@ -15,7 +17,11 @@ export function SummaryCards({
   totalPending,
   countPaid,
   countPending,
+  totalIncome = 0,
+  saldo = 0,
 }: SummaryCardsProps) {
+  const executionRate = totalAmount > 0 ? Math.round((totalPaid / totalAmount) * 100) : 0;
+
   const cards = [
     {
       title: 'Total do Mês',
@@ -27,6 +33,7 @@ export function SummaryCards({
     {
       title: 'Pago',
       value: formatBRL(totalPaid),
+      subtitle: `${executionRate}% pago`,
       count: `${countPaid} conta${countPaid !== 1 ? 's' : ''}`,
       icon: CheckCircle,
       iconBg: 'rgba(34,211,168,0.14)',
@@ -50,7 +57,7 @@ export function SummaryCards({
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className={`grid gap-3 ${totalIncome > 0 ? 'grid-cols-2 lg:grid-cols-3' : 'grid-cols-2 lg:grid-cols-4'}`}>
       {cards.map((card) => {
         const Icon = card.icon;
         return (
@@ -82,6 +89,11 @@ export function SummaryCards({
             >
               {card.value}
             </p>
+            {card.subtitle && (
+              <p className="text-[11px] mt-1" style={{ color: '#9CA3AF' }}>
+                {card.subtitle}
+              </p>
+            )}
             {card.count && (
               <p className="text-[11px] mt-1" style={{ color: '#6B7280' }}>
                 {card.count}
@@ -90,6 +102,48 @@ export function SummaryCards({
           </div>
         );
       })}
+
+      {totalIncome > 0 && (
+        <div
+          className="rounded-2xl p-4"
+          style={{
+            backgroundColor: '#141419',
+            border: '1px solid rgba(255,255,255,0.07)',
+          }}
+        >
+          <div className="flex items-start justify-between mb-3">
+            <p
+              className="text-[11px] font-medium uppercase tracking-wider"
+              style={{ color: '#6B7280' }}
+            >
+              Saldo
+            </p>
+            <div
+              className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
+              style={{
+                backgroundColor: saldo >= 0 ? 'rgba(34,211,168,0.14)' : 'rgba(248,113,113,0.14)',
+              }}
+            >
+              <TrendingUp
+                className="h-4 w-4"
+                style={{ color: saldo >= 0 ? '#22D3A8' : '#F87171' }}
+              />
+            </div>
+          </div>
+          <p
+            className="text-xl font-bold leading-tight"
+            style={{
+              color: saldo >= 0 ? '#22D3A8' : '#F87171',
+              fontFamily: 'var(--font-sora)',
+            }}
+          >
+            {saldo >= 0 ? '+' : '-'}{formatBRL(Math.abs(saldo))}
+          </p>
+          <p className="text-[11px] mt-1" style={{ color: '#6B7280' }}>
+            {saldo >= 0 ? 'Sobrou' : 'Faltou'}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

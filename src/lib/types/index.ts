@@ -59,3 +59,16 @@ export interface Budget {
   amount_limit: number;
   created_at: string;
 }
+
+export interface Income {
+  id: string;
+  user_id: string;
+  category_id: string | null;
+  description: string;
+  amount: number;
+  date: string;
+  month: string;
+  entity_type: EntityType;
+  notes: string | null;
+  created_at: string;
+}

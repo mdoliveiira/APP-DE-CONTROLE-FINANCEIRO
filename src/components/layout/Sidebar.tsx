@@ -11,6 +11,7 @@ import { useTheme } from '@/components/providers/ThemeProvider';
 const navItems = [
   { href: '/dashboard', icon: Home, label: 'Dashboard' },
   { href: '/expenses', icon: BarChart3, label: 'Contas' },
+  { href: '/incomes', icon: TrendingUp, label: 'Receitas' },
   { href: '/credit-cards', icon: CreditCard, label: 'Cartões' },
   { href: '/reports', icon: BarChart2, label: 'Relatórios' },
   { href: '/categories', icon: Tag, label: 'Categorias' },

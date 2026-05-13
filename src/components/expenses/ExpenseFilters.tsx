@@ -6,19 +6,21 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
-import type { Category, EntityType } from '@/lib/types';
+import type { Category, EntityType, CreditCard } from '@/lib/types';
 
 interface ExpenseFiltersProps {
   categories: Category[];
   entityType?: EntityType | 'todos';
+  creditCards?: Record<string, CreditCard>;
 }
 
-export function ExpenseFilters({ categories, entityType = 'todos' }: ExpenseFiltersProps) {
+export function ExpenseFilters({ categories, entityType = 'todos', creditCards = {} }: ExpenseFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const [status, setStatus] = useState(searchParams.get('status') || 'todas');
   const [categoryId, setCategoryId] = useState(searchParams.get('category_id') || '');
+  const [creditCardId, setCreditCardId] = useState(searchParams.get('credit_card_id') || '');
   const [search, setSearch] = useState(searchParams.get('search') || '');
 
   const applyFilters = useCallback(() => {
@@ -28,16 +30,18 @@ export function ExpenseFilters({ categories, entityType = 'todos' }: ExpenseFilt
     params.delete('status');
     params.delete('category_id');
     params.delete('search');
+    params.delete('credit_card_id');
 
     if (status !== 'todas') params.set('status', status);
     if (categoryId) params.set('category_id', categoryId);
     if (search) params.set('search', search);
+    if (creditCardId) params.set('credit_card_id', creditCardId);
     if (month) params.set('month', month);
     if (entityType !== 'todos') params.set('entity_type', entityType);
 
     const query = params.toString();
     router.push(`/expenses${query ? '?' + query : ''}`);
-  }, [router, searchParams, status, categoryId, search, entityType]);
+  }, [router, searchParams, status, categoryId, search, creditCardId, entityType]);
 
   const clearFilters = useCallback(() => {
     const params = new URLSearchParams();
@@ -47,13 +51,18 @@ export function ExpenseFilters({ categories, entityType = 'todos' }: ExpenseFilt
 
     setStatus('todas');
     setCategoryId('');
+    setCreditCardId('');
     setSearch('');
 
     const query = params.toString();
     router.push(`/expenses${query ? '?' + query : ''}`);
   }, [router, searchParams, entityType]);
 
-  const hasFilters = status !== 'todas' || categoryId || search;
+  const hasFilters = status !== 'todas' || categoryId || creditCardId || search;
+
+  const handleCreditCardToggle = (cardId: string) => {
+    setCreditCardId(creditCardId === cardId ? '' : cardId);
+  };
 
   return (
     <div
@@ -63,6 +72,28 @@ export function ExpenseFilters({ categories, entityType = 'todos' }: ExpenseFilt
         border: '1px solid rgba(255,255,255,0.07)',
       }}
     >
+      {Object.keys(creditCards).length > 0 && (
+        <div className="space-y-2">
+          <label className="text-xs font-medium" style={{ color: '#9CA3AF' }}>Cartão de Crédito</label>
+          <div className="flex flex-wrap gap-2">
+            {Object.values(creditCards).map((card) => (
+              <button
+                key={card.id}
+                onClick={() => handleCreditCardToggle(card.id)}
+                className="px-3 py-2 rounded-lg text-sm font-medium transition-all"
+                style={{
+                  backgroundColor: creditCardId === card.id ? card.color : 'transparent',
+                  color: creditCardId === card.id ? '#0D0D12' : card.color,
+                  border: `1.5px solid ${card.color}`,
+                }}
+              >
+                {card.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-4">
         {/* Status Filter */}
         <div className="space-y-1.5">

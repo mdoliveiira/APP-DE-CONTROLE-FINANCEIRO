@@ -4,7 +4,7 @@ import { SummaryCards } from '@/components/dashboard/SummaryCards';
 import { ExpenseChart } from '@/components/dashboard/ExpenseChart';
 import { UpcomingBills } from '@/components/dashboard/UpcomingBills';
 import { BudgetProgress } from '@/components/dashboard/BudgetProgress';
-import type { Expense, Category, Budget, EntityType } from '@/lib/types';
+import type { Expense, Category, Budget, EntityType, Income } from '@/lib/types';
 import { addDays, isWithinInterval } from 'date-fns';
 import Link from 'next/link';
 
@@ -41,7 +41,15 @@ export default async function DashboardPage({
     .select('*')
     .eq('user_id', user?.id);
 
+  const { data: incomes } = await supabase
+    .from('incomes')
+    .select('*')
+    .eq('user_id', user?.id)
+    .eq('month', month)
+    .eq('entity_type', entityType);
+
   const expensesData = (expenses || []) as Expense[];
+  const incomesData = (incomes || []) as Income[];
   const categoriesMap = new Map(
     (categories || []).map((cat: Category) => [cat.id, cat])
   );
@@ -65,6 +73,9 @@ export default async function DashboardPage({
     .reduce((sum, e) => sum + e.amount, 0);
   const countPaid = expensesData.filter((e) => e.status === 'pago').length;
   const countPending = expensesData.filter((e) => e.status === 'pendente').length;
+
+  const totalIncome = incomesData.reduce((sum, i) => sum + i.amount, 0);
+  const saldo = totalIncome - totalAmount;
 
   const upcomingBills = expensesData
     .filter((e) => e.status === 'pendente')
@@ -137,10 +148,15 @@ export default async function DashboardPage({
           totalPending={totalPending}
           countPaid={countPaid}
           countPending={countPending}
+          totalIncome={totalIncome}
+          saldo={saldo}
         />
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <ExpenseChart paid={totalPaid} pending={totalPending} />
+          <ExpenseChart
+            spendingByCategory={spendingByCategory}
+            categories={categoriesMap}
+          />
           <UpcomingBills bills={upcomingBills} categories={categoriesMap} />
         </div>
 
@@ -149,6 +165,7 @@ export default async function DashboardPage({
             budgets={(budgets || []) as Budget[]}
             categories={categoriesMap}
             spendingByCategory={spendingByCategory}
+            entityType={entityType}
           />
         )}
       </div>
