@@ -1,10 +1,22 @@
 'use client';
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { format, parse } from 'date-fns';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  ReferenceLine,
+  Cell,
+} from 'recharts';
+import { formatBRL } from '@/lib/utils/currency';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-interface MonthlyData {
+interface MonthData {
   month: string;
   paid: number;
   pending: number;
@@ -12,76 +24,85 @@ interface MonthlyData {
 }
 
 interface MonthlyBarChartProps {
-  data: MonthlyData[];
+  data: MonthData[];
 }
 
 export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
-  const formattedData = data.map((item) => ({
-    ...item,
-    monthLabel: format(parse(item.month, 'yyyy-MM', new Date()), 'MMM', { locale: ptBR }),
-  }));
+  const chartData = data.map((item, index) => {
+    const prevTotal = index > 0 ? data[index - 1].total : item.total;
+    const variation = prevTotal > 0 ? (((item.total - prevTotal) / prevTotal) * 100).toFixed(0) : '0';
+    return {
+      ...item,
+      monthLabel: format(new Date(item.month + '-01'), 'MMM', { locale: ptBR }),
+      variation: parseFloat(variation),
+    };
+  });
+
+  const averageTotal = data.reduce((sum, item) => sum + item.total, 0) / data.length;
 
   return (
     <div
-      className="p-4 rounded-2xl"
-      style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)' }}
+      className="rounded-xl p-6"
+      style={{
+        backgroundColor: '#141419',
+        border: '1px solid rgba(255,255,255,0.07)',
+      }}
     >
-      <h2
-        className="text-lg font-semibold mb-4"
-        style={{ color: 'var(--foreground)' }}
-      >
-        Evolução Mensal
-      </h2>
+      <h3 className="mb-6 text-sm font-semibold" style={{ color: '#E8E8EE' }}>
+        Despesas Mensais
+      </h3>
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart
-          data={formattedData}
-          margin={{ top: 20, right: 30, left: 0, bottom: 20 }}
-        >
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="var(--border)"
-            vertical={false}
-          />
-          <XAxis
-            dataKey="monthLabel"
-            stroke="var(--muted-foreground)"
-            fontSize={12}
-          />
-          <YAxis
-            stroke="var(--muted-foreground)"
-            fontSize={12}
-            label={{
-              value: 'R$',
-              angle: -90,
-              position: 'insideLeft',
-              fill: 'var(--muted-foreground)',
-            }}
-          />
+        <BarChart data={chartData}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+          <XAxis dataKey="monthLabel" stroke="#9CA3AF" />
+          <YAxis stroke="#9CA3AF" />
           <Tooltip
+            formatter={(value: number) => formatBRL(value)}
             contentStyle={{
-              backgroundColor: 'var(--background)',
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
-              color: 'var(--foreground)',
+              backgroundColor: '#1F2937',
+              border: '1px solid rgba(255,255,255,0.07)',
+              borderRadius: '0.5rem',
+              color: '#E8E8EE',
             }}
-            formatter={(value) => {
-              if (typeof value === 'number') {
-                return `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            labelStyle={{ color: '#E8E8EE' }}
+            content={({ active, payload }) => {
+              if (active && payload && payload[0]) {
+                const data = payload[0].payload;
+                return (
+                  <div
+                    style={{
+                      backgroundColor: '#1F2937',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                      borderRadius: '0.5rem',
+                      padding: '8px 12px',
+                      color: '#E8E8EE',
+                      fontSize: '12px',
+                    }}
+                  >
+                    <p>{data.monthLabel}</p>
+                    <p>Pago: {formatBRL(data.paid)}</p>
+                    <p>Pendente: {formatBRL(data.pending)}</p>
+                    <p style={{ fontWeight: 'bold' }}>Total: {formatBRL(data.total)}</p>
+                    {data.variation !== 0 && (
+                      <p style={{ color: data.variation > 0 ? '#F87171' : '#22D3A8' }}>
+                        {data.variation > 0 ? '↑' : '↓'} {Math.abs(data.variation)}%
+                      </p>
+                    )}
+                  </div>
+                );
               }
-              return value;
+              return null;
             }}
           />
-          <Legend
-            wrapperStyle={{ paddingTop: '20px' }}
-            iconType="square"
-            formatter={(value) => (
-              <span style={{ color: 'var(--foreground)' }}>
-                {value === 'paid' ? 'Pago' : 'Pendente'}
-              </span>
-            )}
+          <Legend />
+          <ReferenceLine
+            y={averageTotal}
+            stroke="#8B5CF6"
+            strokeDasharray="5 5"
+            label={{ value: 'Média', position: 'insideTopRight', offset: -10, fill: '#8B5CF6' }}
           />
-          <Bar dataKey="paid" fill="#22D3A8" radius={[8, 8, 0, 0]} />
-          <Bar dataKey="pending" fill="#F59E0B" radius={[8, 8, 0, 0]} />
+          <Bar dataKey="paid" fill="#22D3A8" name="Pago" />
+          <Bar dataKey="pending" fill="#F59E0B" name="Pendente" />
         </BarChart>
       </ResponsiveContainer>
     </div>

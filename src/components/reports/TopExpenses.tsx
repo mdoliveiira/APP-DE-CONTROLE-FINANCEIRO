@@ -1,6 +1,9 @@
 'use client';
 
 import type { Expense, Category } from '@/lib/types';
+import { formatBRL } from '@/lib/utils/currency';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface TopExpensesProps {
   expenses: Expense[];
@@ -8,69 +11,80 @@ interface TopExpensesProps {
 }
 
 export function TopExpenses({ expenses, categories }: TopExpensesProps) {
+  if (expenses.length === 0) {
+    return (
+      <div
+        className="rounded-2xl p-6"
+        style={{
+          backgroundColor: '#141419',
+          border: '1px solid rgba(255,255,255,0.07)',
+        }}
+      >
+        <h3
+          className="mb-6 text-base font-semibold"
+          style={{ color: '#E8E8EE', fontFamily: 'var(--font-sora)' }}
+        >
+          Maiores Despesas
+        </h3>
+        <p style={{ color: '#6B7280' }}>Nenhuma despesa paga encontrada</p>
+      </div>
+    );
+  }
+
+  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+
   return (
     <div
-      className="p-4 rounded-2xl"
-      style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)' }}
+      className="rounded-2xl p-6"
+      style={{
+        backgroundColor: '#141419',
+        border: '1px solid rgba(255,255,255,0.07)',
+      }}
     >
-      <h2
-        className="text-lg font-semibold mb-4"
-        style={{ color: 'var(--foreground)' }}
+      <h3
+        className="mb-6 text-base font-semibold"
+        style={{ color: '#E8E8EE', fontFamily: 'var(--font-sora)' }}
       >
-        Maiores Despesas
-      </h2>
-      {expenses.length === 0 ? (
-        <div style={{ color: 'var(--muted-foreground)' }}>
-          Sem despesas para exibir
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {expenses.map((expense) => {
-            const category = expense.category_id ? categories.get(expense.category_id) : null;
-            return (
-              <div
-                key={expense.id}
-                className="flex items-center justify-between p-3 rounded-xl"
-                style={{
-                  backgroundColor: 'var(--background)',
-                  borderLeft: `4px solid ${category?.color || 'var(--border)'}`,
-                }}
-              >
-                <div>
-                  <p
-                    className="font-medium text-sm"
-                    style={{ color: 'var(--foreground)' }}
-                  >
-                    {expense.description}
-                  </p>
-                  <p
-                    className="text-xs"
-                    style={{ color: 'var(--muted-foreground)' }}
-                  >
-                    {category?.name || 'Sem categoria'}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p
-                    className="font-semibold text-sm"
-                    style={{ color: 'var(--foreground)' }}
-                  >
-                    R$ {expense.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </p>
-                  <p
-                    className="text-xs"
-                    style={{
-                      color: expense.status === 'pago' ? '#22D3A8' : '#F59E0B',
-                    }}
-                  >
-                    {expense.status === 'pago' ? 'Pago' : 'Pendente'}
-                  </p>
-                </div>
+        Maiores Despesas Pagas
+      </h3>
+      <div className="space-y-3">
+        {expenses.map((expense, index) => {
+          const category = expense.category_id ? categories.get(expense.category_id) : undefined;
+          const percentage = ((expense.amount / totalExpenses) * 100).toFixed(1);
+          const monthLabel = format(new Date(expense.month + '-01'), 'MMM', { locale: ptBR });
+
+          return (
+            <div
+              key={expense.id}
+              className="flex items-center gap-4 rounded-lg p-3"
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.03)',
+                borderLeft: `3px solid ${category?.color || '#6B7280'}`,
+              }}
+            >
+              <div className="text-lg font-bold w-6" style={{ color: '#C9973A' }}>
+                #{index + 1}
               </div>
-            );
-          })}
-        </div>
-      )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate" style={{ color: '#E8E8EE' }}>
+                  {expense.description}
+                </p>
+                <p className="text-xs" style={{ color: '#6B7280' }}>
+                  {category?.name} • {monthLabel}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-sm font-bold" style={{ color: '#E8E8EE', fontFamily: 'var(--font-sora)' }}>
+                  {formatBRL(expense.amount)}
+                </p>
+                <p className="text-xs" style={{ color: '#9CA3AF' }}>
+                  {percentage}% do total
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
